@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
 
@@ -22,7 +22,7 @@ const Login = () => {
       if (!response.ok) throw new Error(data.message);
 
       login(data.token);
-      navigate('/dashboard');
+      navigate("/");
     } catch (err) {
       setError(err.message);
     }
@@ -32,8 +32,19 @@ const Login = () => {
     <form onSubmit={handleSubmit}>
       <h2>Login</h2>
       {error && <p>{error}</p>}
-      <input value={username} onChange={(e) => setUsername(e.target.value)} required placeholder="Username" />
-      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Password" />
+      <input
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        required
+        placeholder="Username"
+      />
+      <input
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+        placeholder="Password"
+      />
       <button type="submit">Login</button>
     </form>
   );

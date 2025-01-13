@@ -22,7 +22,7 @@ const Register = () => {
       if (!response.ok) throw new Error(data.message);
 
       login(data.token);
-      navigate('/');
+      navigate('/Login');
     } catch (err) {
       setError(err.message);
     }
