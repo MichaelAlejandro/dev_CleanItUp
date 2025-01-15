@@ -1,26 +1,35 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import Index from './components/Index';
-import Register from './components/Register';
+import AboutUs from './components/AboutUs';
+import Ranking from './components/Ranking';
+import Plantations from './components/Plantations';
+import KnowMore from './components/KnowMore';
+import Game from './components/Game';
 import Login from './components/Login';
+import Register from './components/Register';
 
-const App = () => {
+function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <Router>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/aboutus" element={<AboutUs />} />
+          <Route path="/ranking" element={<Ranking />} />
+          <Route path="/plantations" element={<Plantations />} />
+          <Route path="/knowmore" element={<KnowMore />} />
+          <Route path="/game" element={<Game />} />
           <Route path="/login" element={<Login />} />
-          
+          <Route path="/register" element={<Register />} />
         </Routes>
-      </BrowserRouter>
+      </Router>
     </AuthProvider>
   );
-};
+}
 
 export default App;

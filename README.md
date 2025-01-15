@@ -19,7 +19,7 @@ El proyecto está dividido en dos partes: frontend y backend, utilizando una arq
 
 ### Frontend
 
-El frontend está desarrollado con **React**, aprovechando su ecosistema para construir una interfaz de usuario interactiva y moderna.
+El frontend está desarrollado con React, aprovechando su ecosistema para construir una interfaz de usuario interactiva y moderna.
 
 - **Dependencias principales:**
   - `@tailwindcss/forms`: Estilos modernos para formularios.
@@ -30,7 +30,7 @@ El frontend está desarrollado con **React**, aprovechando su ecosistema para co
 
 ### Backend
 
-El backend está construido con **Node.js** y **Express**, proporcionando una base robusta y eficiente para gestionar la lógica del servidor y la integración con la base de datos **MongoDB**.
+El backend está construido con Node.js y Express, proporcionando una base robusta y eficiente para gestionar la lógica del servidor y la integración con la base de datos MongoDB.
 
 - **Dependencias principales:**
   - `bcryptjs`: Encriptación de contraseñas.

@@ -2,34 +2,14 @@ import React from "react";
 import Videofondo from '../assets/videos/videofondo2.mp4'
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Navbar from './Navbar';
 
 const Index = () => {
-  const { token, logout } = useAuth();
+  const { token} = useAuth();
 
   return (
     <div>
-      <nav>
-            <ul>
-              <li>
-                <Link to="/">Inicio</Link>
-              </li>
-                  <li>
-                  <Link to="/aboutus">Conócenos</Link>
-                  </li>
-                  <li>
-                  <Link to="/ranking">Ranking</Link>
-                  </li>
-                  <li>
-                  <Link to="/plantations">🌱Plantaciones🌱</Link>
-                  </li>
-                  <li>
-                  <Link to="/knowmore">Saber más!</Link>
-                  </li>
-                  <li>
-                    <button onClick={logout} >Cerrar Sesión</button>
-                  </li>
-            </ul>
-          </nav>
+      <Navbar />
       <section className="banner" id="inicio">
         <div className="video-container">
           <video  autoPlay muted loop playsInline className="bg-video">
