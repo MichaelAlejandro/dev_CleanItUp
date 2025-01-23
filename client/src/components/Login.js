@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
+import "../styles/Login.css";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -31,60 +31,56 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#D3F1DF] to-[#85A98F] flex items-center justify-center">
-      <div className="container">
-        <div className="bg-white shadow-2xl rounded-2xl w-full max-w-md p-8">
-          <h2 className="text-3xl font-bold text-center text-[#47663B] mb-6">
-            Iniciar Sesión
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && <p className="text-red-500 text-center">{error}</p>}
-            
-            <div className="relative">
-              <i className="bi bi-person-fill absolute left-3 top-1/2 transform -translate-y-1/2 text-black-400"></i>
-              <input 
-                type="text" 
-                placeholder="Nombre de usuario" 
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
-              />
-            </div>
-            
-            <div className="relative">
-              <i className="bi bi-lock-fill absolute left-3 top-1/2 transform -translate-y-1/2 text-black-400"></i>
-              <input 
-                type={showPassword ? "text" : "password"}
-                placeholder="Contraseña" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
-              />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#47663B]"
-              >
-                <i className={`bi ${showPassword ? 'bi-eye-fill' : 'bi-eye-slash-fill'}`}></i>
-              </button>
-            </div>
-            
-            <button 
-              type="submit" 
-              className="w-full bg-gradient-to-r from-[#85A98F] to-[#D3F1DF] text-white py-3 rounded-lg hover:opacity-90 transition-opacity"
+    <div className="login-page">
+      <div className="login-card">
+        <h2 className="login-title">Iniciar Sesión</h2>
+
+        {error && <p className="login-error">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="login-form">
+
+          {/* Campo de usuario */}
+          <div className="login-input-wrapper">
+            {/* Ícono a la izquierda */}
+            <i className="login-input-icon bi bi-person-fill"></i>
+            <input
+              type="text"
+              placeholder="Nombre de usuario"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="login-input"
+              required
+            />
+          </div>
+
+          {/* Campo de contraseña */}
+          <div className="login-input-wrapper">
+            <i className="login-input-icon bi bi-lock-fill"></i>
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="login-input"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="password-toggle-btn"
             >
-              Iniciar Sesión
+              <i className={`bi ${showPassword ? "bi-eye-fill" : "bi-eye-slash-fill"}`}></i>
             </button>
-    
-            <div className="text-center">
-              <a href="/register" className="text-sm text-[#5A6C57] hover:underline">
-                ¿No tienes cuenta? Registrarse
-              </a>
-            </div>
-          </form>
-        </div>
+          </div>
+
+          <button type="submit" className="login-button">
+            Iniciar Sesión
+          </button>
+
+          <div className="login-footer">
+            <a href="/register">¿No tienes cuenta? Registrarse</a>
+          </div>
+        </form>
       </div>
     </div>
   );

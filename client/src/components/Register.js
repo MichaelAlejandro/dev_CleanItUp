@@ -1,30 +1,30 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import "../styles/Register.css"; 
 
 const Register = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validar que las contraseñas coincidan
+
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden");
       return;
     }
-    
+
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("http://localhost:5000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
 
@@ -32,86 +32,81 @@ const Register = () => {
       if (!response.ok) throw new Error(data.message);
 
       login(data.token);
-      navigate('/Login');
+      navigate("/login");
     } catch (err) {
       setError(err.message);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#D3F1DF] to-[#85A98F] flex items-center justify-center">
-      <div className="container">
-        <div className="bg-white shadow-2xl rounded-2xl w-full max-w-md p-8">
-          <h2 className="text-3xl font-bold text-center text-[#47663B] mb-6">
-            Registrarse
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && <p className="text-red-500 text-center">{error}</p>}
-            
-            <div className="relative">
-              <i className="bi bi-person-fill absolute left-3 top-1/2 transform -translate-y-1/2 text-black-400"></i>
-              <input 
-                type="text" 
-                placeholder="Nombre de usuario" 
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
-              />
-            </div>
-            
-            <div className="relative">
-              <i className="bi bi-lock-fill absolute left-3 top-1/2 transform -translate-y-1/2 text-black-400"></i>
-              <input 
-                type={showPassword ? "text" : "password"}
-                placeholder="Contraseña" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
-              />
-              <button 
-                type="button" 
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#47663B]"
-              >
-                <i className={`bi ${showPassword ? 'bi-eye-fill' : 'bi-eye-slash-fill'}`}></i>
-              </button>
-            </div>
+    <div className="register-page">
+      <div className="register-card">
+        <h2 className="register-title">Registrarse</h2>
 
-            <div className="relative">
-              <i className="bi bi-lock-fill absolute left-3 top-1/2 transform -translate-y-1/2 text-black-400"></i>
-              <input 
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Confirmar Contraseña" 
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                required
-              />
-              <button 
-                type="button" 
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#47663B]"
-              >
-                <i className={`bi ${showConfirmPassword ? 'bi-eye-fill' : 'bi-eye-slash-fill'}`}></i>
-              </button>
-            </div>
-            
-            <button 
-              type="submit" 
-              className="w-full bg-gradient-to-r from-[#85A98F] to-[#D3F1DF] text-white py-3 rounded-lg hover:opacity-90 transition-opacity"
+        {error && <p className="register-error">{error}</p>}
+
+        <form onSubmit={handleSubmit} className="register-form">
+          {/* Usuario */}
+          <div className="register-input-wrapper">
+            <i className="register-input-icon bi bi-person-fill"></i>
+            <input
+              type="text"
+              placeholder="Nombre de usuario"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="register-input"
+              required
+            />
+          </div>
+
+          {/* Contraseña */}
+          <div className="register-input-wrapper">
+            <i className="register-input-icon bi bi-lock-fill"></i>
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="register-input"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="password-toggle-btn"
             >
-              Registrarse
+              <i className={`bi ${showPassword ? "bi-eye-fill" : "bi-eye-slash-fill"}`}></i>
             </button>
-    
-            <div className="text-center">
-              <a href="/login" className="text-sm text-[#5A6C57] hover:underline">
-                ¿Ya tienes cuenta? Inicia sesión
-              </a>
-            </div>
-          </form>
-        </div>
+          </div>
+
+          {/* Confirmar contraseña */}
+          <div className="register-input-wrapper">
+            <i className="register-input-icon bi bi-lock-fill"></i>
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="Confirmar Contraseña"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="register-input"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="password-toggle-btn"
+            >
+              <i className={`bi ${showConfirmPassword ? "bi-eye-fill" : "bi-eye-slash-fill"}`}></i>
+            </button>
+          </div>
+
+          <button type="submit" className="register-button">
+            Registrarse
+          </button>
+
+          <div className="register-footer">
+            <a href="/login">¿Ya tienes cuenta? Inicia sesión</a>
+          </div>
+        </form>
       </div>
     </div>
   );

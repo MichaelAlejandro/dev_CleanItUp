@@ -1,265 +1,281 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import Navbar from './Navbar';
 
-const Game = () => {
+export default function Game() {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [gameActive, setGameActive] = useState(true);
   const [gamePaused, setGamePaused] = useState(false);
-  const [currentBackgroundIndex, setCurrentBackgroundIndex] = useState(0);
   const [playerX, setPlayerX] = useState(175);
+  const [character, setCharacter] = useState(null); // Aquí guardamos el main character
+  const [backgroundIndex, setBackgroundIndex] = useState(0);
 
-  const gameContainerRef = useRef(null);
-  const playerRef = useRef(null);
-  const trashIntervalRef = useRef(null);
+  // Array de basura:
+  const [trashes, setTrashes] = useState([]);
+
+  // Teclas
   const keysRef = useRef({ left: false, right: false });
-  const fallSpeedMultiplierRef = useRef(1);
-  const trashSpawnIntervalRef = useRef(1000);
 
+  // Imágenes de fondo (opc) o usar body css
   const backgrounds = [
-    'url("../assets/images/background1.jpg")',
-    'url("../assets/images/background2.jpg")',
-    'url("../assets/images/background3.jpg")',
-    'url("../assets/images/background4.jpg")',
-    'url("../assets/images/background5.jpg")',
-    'url("../assets/images/background6.jpg")'
+    '/assets/background1.jpg',
+    '/assets/background2.jpg',
+    '/assets/background3.jpg',
+    '/assets/background4.jpg',
+    '/assets/background5.jpg',
+    '/assets/background6.jpg',
   ];
 
-  const trashImages = [
-    '../assets/images/trash1.png',
-    '../assets/images/trash3.png',
-    '../assets/images/trash4.png'
+  // Imágenes de basura
+  const trashImgs = [
+    '/assets/trash1.png',
+    '/assets/trash3.png',
+    '/assets/trash4.png',
   ];
 
-  const updateBackground = (currentScore) => {
-    const changeInterval = 30;
-    const newBackgroundIndex = Math.floor(currentScore / changeInterval) % backgrounds.length;
-    
-    if (newBackgroundIndex !== currentBackgroundIndex) {
-      setCurrentBackgroundIndex(newBackgroundIndex);
-      document.body.style.backgroundImage = backgrounds[newBackgroundIndex];
-      document.body.style.backgroundSize = 'cover';
-      document.body.style.backgroundPosition = 'center';
+  // ================ 1) OBTENER MAIN CHARACTER =================
+  useEffect(() => {
+    const fetchMainCharacter = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/characters/main');
+        if (!res.ok) throw new Error('No se pudo obtener el personaje');
+        const data = await res.json();
+        setCharacter(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchMainCharacter();
+  }, []);
+
+  // ================ 2) ESCUCHAR TECLAS ================
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!gameActive || gamePaused) return;
+      if (e.key === 'ArrowLeft') keysRef.current.left = true;
+      if (e.key === 'ArrowRight') keysRef.current.right = true;
+      if (e.key === 'Escape') setGamePaused((p) => !p);
+    };
+    const handleKeyUp = (e) => {
+      if (e.key === 'ArrowLeft') keysRef.current.left = false;
+      if (e.key === 'ArrowRight') keysRef.current.right = false;
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [gameActive, gamePaused]);
+
+  // ================ 3) GAMELOOP con requestAnimationFrame ================
+  useEffect(() => {
+    let animId;
+    const loop = () => {
+      if (gameActive && !gamePaused) {
+        // mover player
+        setPlayerX((prev) => {
+          let newX = prev;
+          if (keysRef.current.left && newX > 0) newX -= 5;
+          if (keysRef.current.right && newX < 350) newX += 5;
+          return newX;
+        });
+        // mover basura
+        setTrashes((prev) =>
+          prev
+            .map((t) => ({ ...t, y: t.y + t.speed }))
+            .filter((t) => {
+              // si se sale => loseLife
+              if (t.y > 550) {
+                loseLife();
+                return false;
+              }
+              // checar colisión
+              const playerRect = { x: playerX, y: 550, width: 50, height: 50 };
+              const trashRect = { x: t.x, y: t.y, width: 30, height: 30 };
+              if (checkCollision(playerRect, trashRect)) {
+                gainPoint();
+                return false;
+              }
+              return true;
+            })
+        );
+      }
+      animId = requestAnimationFrame(loop);
+    };
+    loop();
+    return () => cancelAnimationFrame(animId);
+  }, [gameActive, gamePaused]);
+
+  // ================ 4) SPAWN BASURA =================
+  const spawnRef = useRef(null);
+  useEffect(() => {
+    if (!gameActive) return;
+    if (gamePaused) {
+      clearInterval(spawnRef.current);
+    } else {
+      spawnRef.current = setInterval(() => {
+        const x = Math.random() * 370;
+        const speed = 5;
+        const img = trashImgs[Math.floor(Math.random() * trashImgs.length)];
+        setTrashes((prev) => [
+          ...prev,
+          { id: Date.now() + Math.random(), x, y: 0, speed, img },
+        ]);
+      }, 1000);
     }
+    return () => clearInterval(spawnRef.current);
+  }, [gameActive, gamePaused]);
+
+  // ================ FUNCIONES ================
+  function checkCollision(r1, r2) {
+    return !(
+      r2.x > r1.x + r1.width ||
+      r2.x + r2.width < r1.x ||
+      r2.y > r1.y + r1.height ||
+      r2.y + r2.height < r1.y
+    );
+  }
+
+  const gainPoint = () => {
+    setScore((prev) => {
+      const newScore = prev + 1;
+      checkBackgroundChange(newScore);
+      return newScore;
+    });
   };
 
-  const checkTrashCollision = (playerRect, trashRect) => {
-    const topCollision = 
-      trashRect.bottom >= playerRect.top &&
-      trashRect.top <= playerRect.bottom &&
-      trashRect.right >= playerRect.left &&
-      trashRect.left <= playerRect.right;
-
-    const sideCollision = 
-      trashRect.right >= playerRect.left &&
-      trashRect.left <= playerRect.right &&
-      trashRect.bottom >= playerRect.top &&
-      trashRect.top <= playerRect.bottom;
-
-    return topCollision || sideCollision;
+  const loseLife = () => {
+    setLives((l) => {
+      const newLives = l - 1;
+      if (newLives <= 0) endGame();
+      return newLives;
+    });
   };
 
-  const createTrash = () => {
-    if (!gameActive || gamePaused) return;
+  const checkBackgroundChange = (newScore) => {
+    // cambia cada 30
+    const changeInterval = 30;
+    const newIndex = Math.floor(newScore / changeInterval) % backgrounds.length;
+    setBackgroundIndex(newIndex);
+  };
 
-    const trash = document.createElement('div');
-    const randomTrashImage = trashImages[Math.floor(Math.random() * trashImages.length)];
-    
-    trash.classList.add('trash');
-    trash.style.left = `${Math.random() * 370}px`;
-    trash.style.top = '0px';
-    trash.innerHTML = `<img src="${randomTrashImage}" alt="Basura" style="width: 100%; height: 100%; object-fit: contain;">`;
-    gameContainerRef.current?.appendChild(trash);
-
-    let trashY = 0;
-    let missed = false;
-
-    const fallInterval = setInterval(() => {
-      if (!gameActive || gamePaused) {
-        trash.dataset.fallInterval = fallInterval.toString();
-        clearInterval(fallInterval);
-        return;
-      }
-
-      trashY += 5 * fallSpeedMultiplierRef.current;
-      trash.style.top = `${trashY}px`;
-
-      const playerRect = playerRef.current?.getBoundingClientRect();
-      const trashRect = trash.getBoundingClientRect();
-
-      if (playerRect && checkTrashCollision(playerRect, trashRect)) {
-        gameContainerRef.current?.removeChild(trash);
-        clearInterval(fallInterval);
-        const newScore = score + 1;
-        setScore(newScore);
-        updateBackground(newScore);
-
-        if (newScore % 5 === 0) {
-          clearInterval(trashIntervalRef.current);
-          trashSpawnIntervalRef.current = Math.max(400, trashSpawnIntervalRef.current - 20);
-          trashIntervalRef.current = setInterval(createTrash, trashSpawnIntervalRef.current);
-        }
-      }
-
-      if (trashY > 550 && !missed) {
-        missed = true;
-        const newLives = lives - 1;
-        setLives(newLives);
-        gameContainerRef.current?.removeChild(trash);
-        clearInterval(fallInterval);
-
-        if (newLives <= 0) {
-          setGameActive(false);
-        }
-      }
-    }, 50);
+  const endGame = () => {
+    setGameActive(false);
+    setGamePaused(false);
   };
 
   const initGame = () => {
-    setPlayerX(175);
     setScore(0);
     setLives(3);
     setGameActive(true);
     setGamePaused(false);
-    fallSpeedMultiplierRef.current = 1;
-    trashSpawnIntervalRef.current = 1000;
-
-    const trashElements = document.querySelectorAll('.trash');
-    trashElements.forEach(trash => trash.remove());
-
-    if (trashIntervalRef.current) clearInterval(trashIntervalRef.current);
-    trashIntervalRef.current = setInterval(createTrash, trashSpawnIntervalRef.current);
+    setPlayerX(175);
+    setTrashes([]);
+    setBackgroundIndex(0);
   };
 
-  const pauseGame = () => {
-    if (!gameActive) return;
-    
-    const newPausedState = !gamePaused;
-    setGamePaused(newPausedState);
-    
-    if (newPausedState) {
-      clearInterval(trashIntervalRef.current);
-      const trashElements = document.querySelectorAll('.trash');
-      trashElements.forEach(trash => {
-        trash.dataset.pausedY = trash.style.top;
-        trash.dataset.fallInterval = trash.dataset.fallInterval || 'active';
-      });
-    } else {
-      trashIntervalRef.current = setInterval(createTrash, trashSpawnIntervalRef.current);
-    }
+  // ================ ESTILOS ================
+  // OJO: Si quieres que el fondo ocupe toda la PANTALLA,
+  // puedes ponerlo en body (CSS) o en un contenedor 100vw x 100vh
+  const containerStyle = {
+    width: '400px',
+    height: '600px',
+    position: 'relative',
+    margin: '20px auto',
+    border: '5px solid rgb(50,143,219)',
+    borderRadius: '15px',
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundImage: `url(${backgrounds[backgroundIndex]})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
   };
 
-  useEffect(() => {
-    document.body.style.backgroundImage = backgrounds[0];
-    document.body.style.backgroundSize = 'cover';
-    document.body.style.backgroundPosition = 'center';
-
-    const handleKeyDown = (e) => {
-      if (gamePaused || !gameActive) return;
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-        keysRef.current.left = true;
-        playerRef.current.querySelector('img').style.transform = 'scaleX(1)';
-      }
-      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-        keysRef.current.right = true;
-        playerRef.current.querySelector('img').style.transform = 'scaleX(-1)';
-      }
-      if (e.key === 'Escape') {
-        pauseGame();
-      }
-    };
-
-    const handleKeyUp = (e) => {
-      if (gamePaused || !gameActive) return;
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keysRef.current.left = false;
-      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keysRef.current.right = false;
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && gameActive && !gamePaused) {
-        pauseGame();
-      }
-    };
-
-    const gameLoop = () => {
-      if (!gameActive || gamePaused) return;
-
-      if (keysRef.current.left && playerX > 0) {
-        setPlayerX(prev => Math.max(0, prev - 5));
-      }
-      if (keysRef.current.right && playerX < 350) {
-        setPlayerX(prev => Math.min(350, prev + 5));
-      }
-
-      fallSpeedMultiplierRef.current = Math.min(3, 1 + (score * 0.01));
-      requestAnimationFrame(gameLoop);
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    const animationFrame = requestAnimationFrame(gameLoop);
-    trashIntervalRef.current = setInterval(createTrash, trashSpawnIntervalRef.current);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      cancelAnimationFrame(animationFrame);
-      if (trashIntervalRef.current) clearInterval(trashIntervalRef.current);
-    };
-  }, [gameActive, gamePaused, playerX, score]);
+  const playerStyle = {
+    position: 'absolute',
+    bottom: '10px',
+    left: `${playerX}px`,
+    width: '50px',
+    height: '50px',
+    // Si hay un main character con una imagen => /assets/loquesea.png
+    backgroundImage: character ? `url("/uploads/${character.image}")` : 'none',
+    backgroundSize: 'cover',
+  };
 
   return (
-    <div>
-      <Navbar />
-      <div id="gameContainer" ref={gameContainerRef}>
-        <div id="scoreDisplay">Puntos: {score}</div>
-        <div id="livesDisplay">Vidas: {lives}</div>
-        <button id="pauseButton" onClick={pauseGame}>
+    <div style={{ /* si quieres un background global, usa body CSS. */ }}>
+      <div style={containerStyle}>
+        {/* HUD */}
+        <div style={{
+          position: 'absolute',
+          top: '10px', left: '10px',
+          padding: '6px',
+          borderRadius: '10px',
+          background: 'linear-gradient(135deg, #A1C4FD, #C2E9FB)',
+        }}>
+          Puntos: {score}
+        </div>
+        <div style={{
+          position: 'absolute',
+          top: '10px', right: '10px',
+          padding: '6px',
+          borderRadius: '10px',
+          background: 'linear-gradient(135deg, #A1C4FD, #C2E9FB)',
+        }}>
+          Vidas: {lives}
+        </div>
+
+        <button onClick={() => setGamePaused(!gamePaused)} style={{
+          position: 'absolute',
+          top: '10px', left: '50%',
+          transform: 'translateX(-50%)',
+          padding: '5px 10px',
+          backgroundColor: 'rgb(50,143,219)',
+          border: 'none',
+          borderRadius: '5px',
+          cursor: 'pointer',
+        }}>
           {gamePaused ? 'Continuar' : 'Pausar'}
         </button>
-        
-        <div 
-          id="player" 
-          ref={playerRef}
-          style={{
-            left: `${playerX}px`,
-            width: '50px',
-            height: '50px',
+
+        {/* Jugador */}
+        <div style={playerStyle} />
+
+        {/* Basura */}
+        {trashes.map((t) => (
+          <div key={t.id} style={{
             position: 'absolute',
-            bottom: '10px'
-          }}
-        >
-          <img 
-            src="../assets/images/player.png" 
-            alt="Jugador" 
-            style={{ width: '100%', height: '100%' }} 
-          />
-        </div>
-        
-        {gamePaused && (
-          <div id="pauseScreen" style={{ display: 'flex' }}>
-            <h1>Juego Pausado</h1>
-            <div id="pauseScreenScore">Puntos: {score}</div>
-            <button onClick={pauseGame}>Continuar</button>
-            <Link to="/" className="btn">Volver al Inicio</Link>
+            left: t.x,
+            top: t.y,
+            width: '30px',
+            height: '30px',
+          }}>
+            <img
+              src={t.img}
+              alt="trash"
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
           </div>
-        )}
-        
+        ))}
+
+        {/* GAME OVER */}
         {!gameActive && (
-          <div id="gameOverScreen" style={{ display: 'flex' }}>
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0,
+            width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex', flexDirection: 'column',
+            justifyContent: 'center', alignItems: 'center',
+            color: '#fff', zIndex: 10,
+          }}>
             <h1>¡Perdiste!</h1>
-            <p id="finalScoreDisplay">Puntuación final: {score}</p>
+            <p>Puntuación final: {score}</p>
             <button onClick={initGame}>Volver a Jugar</button>
-            <Link to="/" className="btn">Volver al Inicio</Link>
           </div>
         )}
       </div>
     </div>
   );
-};
-
-export default Game;
+}
