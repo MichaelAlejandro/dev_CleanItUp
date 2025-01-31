@@ -1,9 +1,4 @@
 /* Characters.css */
-
-/* 
-  Reset y estilos globales básicos. 
-  Si ya los tienes en otro archivo (App.css, etc.), puedes omitirlos.
-*/
 html, body {
     margin: 0;
     padding: 0;
@@ -109,48 +104,6 @@ html, body {
     text-align: center;
   }
   
-  /* Cada tarjeta (card) para un personaje */
-  /* .character-card {
-    background-color: #fff;
-    margin: 10px 0;
-    padding: 1rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    position: relative;
-  } */
-  
-  /* Imagen del personaje */
-  /* .character-card img {
-    width: 100px;
-    height: auto;
-    border-radius: 5px;
-    margin-bottom: 0.5rem;
-    display: block;
-  }
-   */
-  /* Nombre y descripción */
-  /* .character-card h3 {
-    margin: 0.5rem 0;
-    color: #2d6a4f;
-    font-size: 1.4rem;
-  }
-  
-  .character-card p {
-    margin: 0.5rem 0;
-  }
-   */
-  /* Botones de acciones */
-   /* .character-card .btn {
-    display: inline-block;
-    margin: 0.5rem 0.5rem 0 0;
-    padding: 0.6rem 1.2rem;
-    font-size: 0.9rem;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: opacity 0.3s;
-  }  */
-  
   .character-card .btn-warning {
     background-color: #FBFADA;
     color: #333;
@@ -172,34 +125,14 @@ html, body {
     opacity: 0.9;
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   .character-card {
     background-color: #fff;
     margin: 20px auto; /* auto para que se centre horizontalmente */
     padding: 1rem;
     border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    
-    /* Establece un ancho fijo o máximo ancho más pequeño */
     width: 800px; /* Ajusta según tu preferencia */
     max-width: 90%;
-  
-    /* Flex para centrar contenido en columna */
-    /* display: flex;
-    flex-direction: column; */
     align-items: center;
     text-align: center; /* Centra texto dentro de la tarjeta */
   }
@@ -221,7 +154,6 @@ html, body {
    .character-card .btn {
     margin: 0.5rem 0.5rem; 
     display: inline-block;
-    /* O usas un .btn-group con display:flex; justify-content:center*/
   } 
   
   

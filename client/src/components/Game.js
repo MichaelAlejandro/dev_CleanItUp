@@ -1,4 +1,8 @@
+import { jwtDecode } from 'jwt-decode';
 import React, { useState, useEffect, useRef } from 'react';
+import styles from '../styles/Game.module.css';
+import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 
 export default function Game() {
   const [score, setScore] = useState(0);
@@ -6,16 +10,24 @@ export default function Game() {
   const [gameActive, setGameActive] = useState(true);
   const [gamePaused, setGamePaused] = useState(false);
   const [playerX, setPlayerX] = useState(175);
-  const [character, setCharacter] = useState(null); // Aquí guardamos el main character
+  const [direction, setDirection] = useState('right'); // Nueva dirección
+  const [character, setCharacter] = useState(null);
   const [backgroundIndex, setBackgroundIndex] = useState(0);
-
-  // Array de basura:
-  const [trashes, setTrashes] = useState([]);
-
-  // Teclas
+  const [dataUpdated, setDataUpdated] = useState(false);
+  
+  const trashRef = useRef([]);
+  const containerRef = useRef(null);
+  const animationFrameRef = useRef(null);
   const keysRef = useRef({ left: false, right: false });
+  const scoreRef = useRef(0);
 
-  // Imágenes de fondo (opc) o usar body css
+
+  const { token } = useAuth();
+  const decodedToken = token ? jwtDecode(token) : null;
+  // console.log('Token decodificado:', decodedToken);
+
+  const userId = token ? jwtDecode(token).userId : null;
+
   const backgrounds = [
     '/assets/background1.jpg',
     '/assets/background2.jpg',
@@ -25,19 +37,22 @@ export default function Game() {
     '/assets/background6.jpg',
   ];
 
-  // Imágenes de basura
   const trashImgs = [
     '/assets/trash1.png',
     '/assets/trash3.png',
     '/assets/trash4.png',
   ];
 
-  // ================ 1) OBTENER MAIN CHARACTER =================
+  useEffect(() => {
+    scoreRef.current = score;
+  }, [score]);
+  
+  // Obtener el personaje principal
   useEffect(() => {
     const fetchMainCharacter = async () => {
       try {
         const res = await fetch('http://localhost:5000/api/characters/main');
-        if (!res.ok) throw new Error('No se pudo obtener el personaje');
+        if (!res.ok) throw new Error('No se pudo obtener el personaje principal');
         const data = await res.json();
         setCharacter(data);
       } catch (error) {
@@ -47,14 +62,26 @@ export default function Game() {
     fetchMainCharacter();
   }, []);
 
-  // ================ 2) ESCUCHAR TECLAS ================
+  // Actualización del fondo basado en el puntaje
+  useEffect(() => {
+    const interval = 5; // Intervalo de puntaje para cambiar el fondo
+    const newIndex = Math.floor(score / interval) % backgrounds.length;
+    setBackgroundIndex(newIndex);
+  }, [score, backgrounds]);
+
+
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (!gameActive || gamePaused) return;
-      if (e.key === 'ArrowLeft') keysRef.current.left = true;
-      if (e.key === 'ArrowRight') keysRef.current.right = true;
-      if (e.key === 'Escape') setGamePaused((p) => !p);
+      if (e.key === 'ArrowLeft') {
+        keysRef.current.left = true;
+        setDirection('left'); // Actualizar dirección
+      }
+      if (e.key === 'ArrowRight') {
+        keysRef.current.right = true;
+        setDirection('right'); // Actualizar dirección
+      }
     };
+
     const handleKeyUp = (e) => {
       if (e.key === 'ArrowLeft') keysRef.current.left = false;
       if (e.key === 'ArrowRight') keysRef.current.right = false;
@@ -62,220 +89,307 @@ export default function Game() {
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [gameActive, gamePaused]);
+  }, []);
+  
 
-  // ================ 3) GAMELOOP con requestAnimationFrame ================
+  // Movimiento del personaje
   useEffect(() => {
-    let animId;
-    const loop = () => {
-      if (gameActive && !gamePaused) {
-        // mover player
-        setPlayerX((prev) => {
-          let newX = prev;
-          if (keysRef.current.left && newX > 0) newX -= 5;
-          if (keysRef.current.right && newX < 350) newX += 5;
-          return newX;
-        });
-        // mover basura
-        setTrashes((prev) =>
-          prev
-            .map((t) => ({ ...t, y: t.y + t.speed }))
-            .filter((t) => {
-              // si se sale => loseLife
-              if (t.y > 550) {
-                loseLife();
-                return false;
-              }
-              // checar colisión
-              const playerRect = { x: playerX, y: 550, width: 50, height: 50 };
-              const trashRect = { x: t.x, y: t.y, width: 30, height: 30 };
-              if (checkCollision(playerRect, trashRect)) {
-                gainPoint();
-                return false;
-              }
-              return true;
-            })
-        );
-      }
-      animId = requestAnimationFrame(loop);
+    const movePlayer = () => {
+      if (!gameActive) return;
+
+      setPlayerX((prevX) => {
+        let newX = prevX;
+        if (keysRef.current.left && newX > 0) newX -= 5;
+        if (keysRef.current.right && newX < 350) newX += 5;
+        return newX;
+      });
     };
-    loop();
-    return () => cancelAnimationFrame(animId);
+
+    const interval = setInterval(() => {
+      if (!gamePaused) {
+        movePlayer();
+      }
+    }, 16);
+
+    return () => clearInterval(interval);
   }, [gameActive, gamePaused]);
 
-  // ================ 4) SPAWN BASURA =================
-  const spawnRef = useRef(null);
-  useEffect(() => {
-    if (!gameActive) return;
-    if (gamePaused) {
-      clearInterval(spawnRef.current);
-    } else {
-      spawnRef.current = setInterval(() => {
-        const x = Math.random() * 370;
-        const speed = 5;
-        const img = trashImgs[Math.floor(Math.random() * trashImgs.length)];
-        setTrashes((prev) => [
-          ...prev,
-          { id: Date.now() + Math.random(), x, y: 0, speed, img },
-        ]);
-      }, 1000);
+
+
+  const moveTrash = () => {
+    if (!gameActive || gamePaused) return;
+  
+    trashRef.current = trashRef.current
+    .map((trash) => ({
+      ...trash,
+      y: trash.y + trash.speed, // Mueve la basura hacia abajo
+    }))
+    .filter((trash) => {
+      if (trash.processed) return false; // Ignora basuras ya procesadas
+
+      const playerElement = document.querySelector(`.${styles.player}`);
+      const trashElement = document.querySelector(`[data-id="${trash.id}"]`);
+
+      if (!playerElement || !trashElement) return true;
+
+      // Detectar colisión
+      if (checkCollision(playerElement, trashElement)) {
+        console.log("Colisión detectada con basura:", trash.id);
+        trash.processed = true; // Marca la basura como procesada
+        gainPoint();
+        return false; // Elimina la basura tras recogerla
+      }
+
+      // Si la basura toca el suelo
+      if (trash.y > 550) {
+        console.log("Basura tocó el suelo:", trash.id);
+        trash.processed = true; // Marca la basura como procesada
+        loseLife();
+        return false; // Elimina la basura
+      }
+
+      return true;
+    });
+
+
+
+
+
+  
+    const trashContainer = document.querySelector(`.${styles.trashContainer}`);
+    if (trashContainer) {
+      // Limpiar el contenedor de basura
+      while (trashContainer.firstChild) {
+        trashContainer.removeChild(trashContainer.firstChild);
+      }
+  
+      // Renderizar basura actualizada
+      trashRef.current.forEach((trash) => {
+        const trashDiv = document.createElement('div');
+        trashDiv.className = styles.trash;
+        trashDiv.style.left = `${trash.x}px`;
+        trashDiv.style.top = `${trash.y}px`;
+        trashDiv.style.backgroundImage = `url(${trash.img})`;
+        trashDiv.setAttribute('data-id', trash.id); // Asigna un atributo único
+        trashContainer.appendChild(trashDiv);
+      });
     }
-    return () => clearInterval(spawnRef.current);
+  
+    animationFrameRef.current = requestAnimationFrame(moveTrash);
+  };
+  
+  
+  
+  useEffect(() => {
+    if (gameActive && !gamePaused) {
+      animationFrameRef.current = requestAnimationFrame(moveTrash);
+    }
+  
+    return () => {
+      cancelAnimationFrame(animationFrameRef.current); // Detener la animación si cambia algo
+    };
   }, [gameActive, gamePaused]);
+  
 
-  // ================ FUNCIONES ================
-  function checkCollision(r1, r2) {
+  // Generar basura periódicamente
+  useEffect(() => {
+    const spawnTrash = () => {
+      if (!gamePaused) {
+        const x = Math.random() * 370;
+        const speed = 2 + Math.random() * 3;
+        const img = trashImgs[Math.floor(Math.random() * trashImgs.length)];
+        trashRef.current.push({ id: Date.now(), x, y: 0, speed, img });
+      }
+    };
+
+    const intervalId = setInterval(spawnTrash, 1000);
+    return () => clearInterval(intervalId);
+  }, [gamePaused]);
+
+  // Verificar colisión
+  const checkCollision = (playerElement, trashElement) => {
+    const playerRect = playerElement.getBoundingClientRect();
+    const trashRect = trashElement.getBoundingClientRect();
+  
     return !(
-      r2.x > r1.x + r1.width ||
-      r2.x + r2.width < r1.x ||
-      r2.y > r1.y + r1.height ||
-      r2.y + r2.height < r1.y
+      trashRect.right < playerRect.left || // Basura está a la izquierda del jugador
+      trashRect.left > playerRect.right || // Basura está a la derecha del jugador
+      trashRect.bottom < playerRect.top || // Basura está por encima del jugador
+      trashRect.top > playerRect.bottom // Basura está por debajo del jugador
     );
-  }
-
-  const gainPoint = () => {
-    setScore((prev) => {
-      const newScore = prev + 1;
-      checkBackgroundChange(newScore);
-      return newScore;
-    });
   };
-
+  
+  
   const loseLife = () => {
-    setLives((l) => {
-      const newLives = l - 1;
-      if (newLives <= 0) endGame();
-      return newLives;
+    if (dataUpdated) {
+      console.log("El juego ya se finalizó, no se llama a endGame nuevamente.");
+      return;
+    }
+  
+    setLives((prev) => {
+      if (prev > 1) {
+        return prev - 1;
+      } else {
+        console.log("Fin del juego: llamando a endGame()");
+        endGame();
+        return 0;
+      }
     });
   };
+  
 
-  const checkBackgroundChange = (newScore) => {
-    // cambia cada 30
-    const changeInterval = 30;
-    const newIndex = Math.floor(newScore / changeInterval) % backgrounds.length;
-    setBackgroundIndex(newIndex);
+  
+
+  // Aumentar puntaje
+  const gainPoint = () => {
+    setScore((prev) => prev + 1);
   };
+
+
 
   const endGame = () => {
+    if (!gameActive || dataUpdated) {
+      console.log("El juego ya ha terminado o los datos ya fueron actualizados.");
+      return;
+    }
+  
+    setDataUpdated(true); // Bloquea futuras ejecuciones inmediatamente
+  
+    const finalScore = scoreRef.current;
+    console.log("EndGame llamado. Score:", finalScore);
+  
     setGameActive(false);
     setGamePaused(false);
+    trashRef.current = [];
+  
+    if (finalScore > 0) {
+      console.log("Llamando a updateGameData con score:", finalScore);
+      updateGameData(finalScore);
+    }
   };
+  
+  
+  
+  
+  
+
 
   const initGame = () => {
+    console.log("Reiniciando el juego...");
     setScore(0);
     setLives(3);
     setGameActive(true);
     setGamePaused(false);
-    setPlayerX(175);
-    setTrashes([]);
     setBackgroundIndex(0);
+    setDataUpdated(false);
+    trashRef.current = [];
   };
+  
+  
 
-  // ================ ESTILOS ================
-  // OJO: Si quieres que el fondo ocupe toda la PANTALLA,
-  // puedes ponerlo en body (CSS) o en un contenedor 100vw x 100vh
-  const containerStyle = {
-    width: '400px',
-    height: '600px',
-    position: 'relative',
-    margin: '20px auto',
-    border: '5px solid rgb(50,143,219)',
-    borderRadius: '15px',
-    overflow: 'hidden',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    backgroundImage: `url(${backgrounds[backgroundIndex]})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-  };
+// console.log("User ID al iniciar el juego:", userId);
+// console.log("Token al iniciar el juego:", token);
+  
+const updateGameData = async (score) => {
+  // console.log("Iniciando updateGameData...");
+  // console.log("User ID:", userId);
+  // console.log("Score:", score);
+  // console.log("Token:", token);
 
-  const playerStyle = {
-    position: 'absolute',
-    bottom: '10px',
-    left: `${playerX}px`,
-    width: '50px',
-    height: '50px',
-    // Si hay un main character con una imagen => /assets/loquesea.png
-    backgroundImage: character ? `url("/uploads/${character.image}")` : 'none',
-    backgroundSize: 'cover',
-  };
+  if (!userId) {
+    console.error("No se pudo obtener el userId del token");
+    return;
+  }
 
+  try {
+    const response = await fetch('http://localhost:5000/api/game-data/update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userId, score }),
+    });
+
+    const data = await response.json();
+    console.log("Respuesta del backend:", data);
+  } catch (error) {
+    console.error("Error al guardar los datos del juego:", error);
+  }
+};
+
+
+
+ 
   return (
-    <div style={{ /* si quieres un background global, usa body CSS. */ }}>
-      <div style={containerStyle}>
-        {/* HUD */}
-        <div style={{
-          position: 'absolute',
-          top: '10px', left: '10px',
-          padding: '6px',
-          borderRadius: '10px',
-          background: 'linear-gradient(135deg, #A1C4FD, #C2E9FB)',
-        }}>
-          Puntos: {score}
-        </div>
-        <div style={{
-          position: 'absolute',
-          top: '10px', right: '10px',
-          padding: '6px',
-          borderRadius: '10px',
-          background: 'linear-gradient(135deg, #A1C4FD, #C2E9FB)',
-        }}>
-          Vidas: {lives}
-        </div>
+    <div
+      className={styles.background}
+      style={{
+        backgroundImage: `url(${backgrounds[backgroundIndex]})`,
+      }}
+    >
+      
 
-        <button onClick={() => setGamePaused(!gamePaused)} style={{
-          position: 'absolute',
-          top: '10px', left: '50%',
-          transform: 'translateX(-50%)',
-          padding: '5px 10px',
-          backgroundColor: 'rgb(50,143,219)',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer',
-        }}>
+      <div className={styles.gameContainer} ref={containerRef}>
+        {/* Contenedor de basura */}
+        <div className={styles.trashContainer}></div>
+
+        <div className={styles.scoreDisplay}>Puntos: {score}</div>
+        <div className={styles.livesDisplay}>Vidas: {lives}</div>
+        <button
+          className={styles.pauseButton}
+          onClick={() => setGamePaused((prev) => !prev)}
+        >
           {gamePaused ? 'Continuar' : 'Pausar'}
         </button>
-
-        {/* Jugador */}
-        <div style={playerStyle} />
-
-        {/* Basura */}
-        {trashes.map((t) => (
-          <div key={t.id} style={{
-            position: 'absolute',
-            left: t.x,
-            top: t.y,
-            width: '30px',
-            height: '30px',
-          }}>
-            <img
-              src={t.img}
-              alt="trash"
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-            />
-          </div>
-        ))}
-
-        {/* GAME OVER */}
-        {!gameActive && (
-          <div style={{
-            position: 'absolute',
-            top: 0, left: 0,
-            width: '100%', height: '100%',
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            display: 'flex', flexDirection: 'column',
-            justifyContent: 'center', alignItems: 'center',
-            color: '#fff', zIndex: 10,
-          }}>
-            <h1>¡Perdiste!</h1>
-            <p>Puntuación final: {score}</p>
-            <button onClick={initGame}>Volver a Jugar</button>
-          </div>
-        )}
+        {/* Contenedor del jugador */}
+        <div
+          className={styles.player}
+          style={{
+            left: `${playerX}px`,
+            bottom: '10px',
+            backgroundImage: character ? `url(/uploads/${character.image})` : 'none',
+            transform: direction === 'left' ? 'scaleX(1)' : 'scaleX(-1)', // Voltea según la dirección
+          }}
+        ></div>
       </div>
+
+
+      
+
+      {!gameActive && (
+        <div className={styles.gameOverScreen}>
+          <h1>¡Perdiste!</h1>
+          <p>Puntuación final: {score}</p>
+          <button className={styles.restartButton} onClick={initGame}>
+            Otra Partida
+          </button>
+            <Link to="/" className={styles.homeButton}>
+              Ir a inicio
+            </Link>
+        </div>
+      )}
+
+      {gamePaused && (
+        <div className={styles.gameOverScreen}>
+          <h1>Pausa!</h1>
+          <p>Puntuación hasta ahora: {score}</p>
+          <button
+            className={styles.restartButton}
+            onClick={() => setGamePaused(false)} // Cambia el estado de pausa
+          >
+            Volver a Jugar
+          </button>
+            <Link to="/" className={styles.homeButton}>
+              Ir a inicio
+            </Link>
+        </div>
+      )}
     </div>
   );
 }

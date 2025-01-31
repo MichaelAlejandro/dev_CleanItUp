@@ -1,20 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Navbar from './Navbar';
+import '../styles/Ranking.module.css';
 
 const Ranking = () => {
-  const rankingData = [
-    { position: 1, user: "Alexander", points: 1500 },
-    { position: 2, user: "Michael", points: 1400 },
-    { position: 3, user: "JeremyNakano", points: 1300 },
-    { position: 4, user: "Katherine", points: 1200 },
-    { position: 5, user: "Alison", points: 1100 }
-  ];
+  const [rankingData, setRankingData] = useState([]);
+
+  // Obtener los datos de ranking del backend
+  useEffect(() => {
+    const fetchRanking = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/game-data/top-scores');
+        const data = await response.json();
+        setRankingData(data);
+      } catch (error) {
+        console.error('Error al obtener el ranking:', error);
+      }
+    };
+
+    fetchRanking();
+  }, []);
 
   return (
-    <div>
+    <>
       <Navbar />
-      <div className="container">
-        <section className="sectionRanking">
+      <section className="section">
+        <div className="card">
           <h1>Ranking</h1>
           <table>
             <thead>
@@ -25,18 +35,18 @@ const Ranking = () => {
               </tr>
             </thead>
             <tbody>
-              {rankingData.map((player) => (
-                <tr key={player.position}>
-                  <td>{player.position}</td>
-                  <td>{player.user}</td>
-                  <td>{player.points}</td>
+              {rankingData.map((player, index) => (
+                <tr key={player.user._id || index}>
+                  <td>{index + 1}</td>
+                  <td>{player.user.username}</td>
+                  <td>{player.best_score}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </section>
-      </div>
-    </div>
+        </div>
+      </section>
+    </>
   );
 };
 
