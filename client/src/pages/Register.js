@@ -5,6 +5,7 @@ import "../styles/Register.css";
 
 const Register = () => {
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -15,26 +16,29 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden");
+      setError("❌ Las contraseñas no coinciden");
       return;
     }
+
+    setError(""); // Limpiar error previo
 
     try {
       const response = await fetch("http://localhost:5000/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, email, password }),
       });
 
       const data = await response.json();
+      
       if (!response.ok) throw new Error(data.message);
 
       login(data.token);
-      navigate("/login");
+      navigate("/");
     } catch (err) {
-      setError(err.message);
+      setError(err.message); 
     }
   };
 
@@ -43,9 +47,22 @@ const Register = () => {
       <div className="register-card">
         <h2 className="register-title">Registrarse</h2>
 
-        {error && <p className="register-error">{error}</p>}
+        {error && <p className="register-error">{error}</p>} 
 
         <form onSubmit={handleSubmit} className="register-form">
+          {/* Correo */}
+          <div className="register-input-wrapper">
+            <i className="register-input-icon bi bi-envelope-at-fill"></i>
+            <input
+              type="email"
+              placeholder="Correo electrónico"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="register-input"
+              required
+            />
+          </div>
+          
           {/* Usuario */}
           <div className="register-input-wrapper">
             <i className="register-input-icon bi bi-person-fill"></i>

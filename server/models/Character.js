@@ -1,13 +1,15 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require("sequelize");
+const { sequelize } = require("../config/db");
 
-const characterSchema = new mongoose.Schema({
-  name: {type: String,required: true,},
-  description: {type: String,required: true,},
-  image: {type: String,required: true,},
-  isMain: {type: Boolean,default: false,},
+const Character = sequelize.define("Character", {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  name: { type: DataTypes.STRING, allowNull: false },
+  description: { type: DataTypes.STRING, allowNull: false },
+  image: { type: DataTypes.STRING, allowNull: false },
+  games_played: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 }, 
 });
 
-module.exports = mongoose.model('Character', characterSchema);
+module.exports = Character;
 
 
 

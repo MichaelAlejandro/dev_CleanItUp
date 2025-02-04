@@ -1,31 +1,51 @@
-const mongoose = require("mongoose");
+const { DataTypes } = require("sequelize");
+const { sequelize } = require("../config/db");
 const bcrypt = require("bcryptjs");
 
-const userSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    minlength: 3,
+const User = sequelize.define("User", {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  
+  username: { 
+    type: DataTypes.STRING, 
+    allowNull: true, // Permitimos null para usuarios de Google
+    unique: { msg: "El nombre de usuario ya está en uso" }, 
+    validate: { notEmpty: { msg: "El nombre de usuario no puede estar vacío" } }
   },
-  password: {
-    type: String,
-    required: true,
+
+  email: { 
+    type: DataTypes.STRING, 
+    allowNull: false, 
+    unique: { msg: "El correo ya está registrado" } 
   },
+
+  password: { type: DataTypes.STRING, allowNull: true }, // ✅ Permitimos null para usuarios de Google
+
+  selectedCharacterId: { 
+    type: DataTypes.INTEGER, 
+    references: { model: "Characters", key: "id" }
+  }
+}, 
+{
+  hooks: {
+    beforeCreate: async (user) => {
+      if (user.password) {
+        console.log("🔹 Encriptando contraseña antes de guardar en la DB...");
+        user.password = await bcrypt.hash(user.password, 10);
+      }
+    },
+    beforeUpdate: async (user) => {
+      if (user.changed("password") && user.password) {
+        console.log("🔹 Actualizando contraseña en la DB...");
+        user.password = await bcrypt.hash(user.password, 10);
+      }
+    }
+  }
 });
 
-// Middleware para encriptar la contraseña antes de guardar
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
-
-// Método para comparar contraseñas
-userSchema.methods.comparePassword = async function (candidatePassword) {
+// 🔹 Método de instancia para comparar contraseñas en el login
+User.prototype.comparePassword = async function (candidatePassword) {
+  if (!this.password) return false; // Evita comparar null en usuarios de Google
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = User;

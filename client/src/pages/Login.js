@@ -1,15 +1,17 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { signInWithGoogle } from "../firebaseConfig";
 import "../styles/Login.css";
 
 const Login = () => {
-  const [username, setUsername] = useState("");
+  const [identifier, setIdentifier] = useState(""); // Puede ser email o username
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { login } = useAuth();
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,18 +19,43 @@ const Login = () => {
       const response = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ identifier, password }),
       });
-
+  
       const data = await response.json();
       if (!response.ok) throw new Error(data.message);
-
-      login(data.token);
+  
+      login(data.token, data.user.id, data.user.username); 
       navigate("/");
     } catch (err) {
       setError(err.message);
     }
   };
+  
+  const handleGoogleLogin = async () => {
+    const user = await signInWithGoogle();
+    if (user) {
+      const response = await fetch("http://localhost:5000/api/auth/google-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email, username: user.displayName }),
+      });
+  
+      const data = await response.json();
+  
+      if (data.requiresUsername) {
+        navigate("/set-username", { state: { email: data.email } });
+      } else if (response.ok) {
+        login(data.token, data.user.id, data.user.username); 
+        navigate("/");
+      } else {
+        setError(data.message);
+      }
+    }
+  };
+  
+  
+
 
   return (
     <div className="login-page">
@@ -38,16 +65,14 @@ const Login = () => {
         {error && <p className="login-error">{error}</p>}
 
         <form onSubmit={handleSubmit} className="login-form">
-
-          {/* Campo de usuario */}
+          {/* Campo de identificador (email o usuario) */}
           <div className="login-input-wrapper">
-            {/* Ícono a la izquierda */}
             <i className="login-input-icon bi bi-person-fill"></i>
             <input
               type="text"
-              placeholder="Nombre de usuario"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Correo o Nombre de Usuario"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               className="login-input"
               required
             />
@@ -73,8 +98,14 @@ const Login = () => {
             </button>
           </div>
 
+          {/* Botón principal */}
           <button type="submit" className="login-button">
             Iniciar Sesión
+          </button>
+
+          {/* Botón de Google */}
+          <button onClick={handleGoogleLogin} className="google-login-btn">
+            <i className="bi bi-google"></i> Iniciar sesión con Google
           </button>
 
           <div className="login-footer">

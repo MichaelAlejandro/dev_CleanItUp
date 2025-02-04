@@ -4,15 +4,16 @@ import { AuthProvider,useAuth } from './context/AuthContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-import Index from './components/Index';
-import AboutUs from './components/AboutUs';
-import Ranking from './components/Ranking';
-import Plantations from './components/Plantations';
-import KnowMore from './components/KnowMore';
-import Login from './components/Login';
-import Register from './components/Register';
-import Game from './components/Game';
-import Characters from './components/Characters';
+import Index from './pages/Index'
+import AboutUs from './pages/AboutUs';
+import Ranking from './pages/Ranking';
+import Plantations from './pages/Plantations';
+import KnowMore from './pages/KnowMore';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Game from './pages/Game';
+import Characters from './pages/Characters';
+import SetUsername from './pages/SetUsername'
 
 
 // Componente para rutas protegidas
@@ -36,6 +37,7 @@ function App() {
                   <Route path="/characters" element={<PrivateRoute><Characters/></PrivateRoute>} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
+                  <Route path="/set-username" element={<SetUsername />} />
               </Routes>
           </Router>
       </AuthProvider>

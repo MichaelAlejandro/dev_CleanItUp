@@ -1,13 +1,16 @@
-const mongoose = require('mongoose');
+const { Sequelize } = require("sequelize");
+const mongoose = require("mongoose");
 
-const connectDB = async () => {
-  try {
-    await mongoose.connect('mongodb://127.0.0.1:27017/auth-system');
-    console.log('MongoDB Conexión exitosa a la base de datos.');
-  } catch (error) {
-    console.error('MongoDB Error en la conexión (base de datos):', error);
-    process.exit(1);
-  }
-};
+// 🔹 Conexión a PostgreSQL
+const sequelize = new Sequelize(process.env.POSTGRES_URI, {
+  dialect: "postgres",
+  logging: false, // Desactiva logs en la consola
+});
 
-module.exports = connectDB;
+// 🔹 Conexión a MongoDB
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+
+module.exports = { sequelize, mongoose };

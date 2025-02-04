@@ -1,12 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import Navbar from "./Navbar";
+import Navbar from "../components/Navbar";
 import Videofondo from "../assets/videos/videofondo2.mp4";
 import "../styles/Index.css";
 
 const Index = () => {
-  const { token } = useAuth();
+  const { token, username } = useAuth();
 
   return (
     <div>
@@ -20,21 +20,18 @@ const Index = () => {
 
         <div className="banner-content">
           {token && <Navbar />}
-
+          
           <h1>Clean It Up!</h1>
 
           {token ? (
-            <Link to="/game" className="btn">
-              Jugar
-            </Link>
+            <>
+              {username && <h2 className="welcome-text">Hola, {username}!</h2>}
+              <Link to="/game" className="btn">Jugar</Link>
+            </>
           ) : (
             <div>
-              <Link to="/login" className="btn">
-                Iniciar Sesión
-              </Link>
-              <Link to="/register" className="btn">
-                Registrarse
-              </Link>
+              <Link to="/login" className="btn">Iniciar Sesión</Link>
+              <Link to="/register" className="btn">Registrarse</Link>
             </div>
           )}
         </div>
