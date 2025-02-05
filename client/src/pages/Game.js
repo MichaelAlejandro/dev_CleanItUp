@@ -1,4 +1,3 @@
-import { jwtDecode } from 'jwt-decode';
 import React, { useState, useEffect, useRef } from 'react';
 import styles from '../styles/Game.module.css';
 import { useAuth } from '../context/AuthContext';
@@ -10,23 +9,26 @@ export default function Game() {
   const [gameActive, setGameActive] = useState(true);
   const [gamePaused, setGamePaused] = useState(false);
   const [playerX, setPlayerX] = useState(175);
-  const [direction, setDirection] = useState('right'); // Nueva dirección
+  const [direction, setDirection] = useState('right');
   const [character, setCharacter] = useState(null);
   const [backgroundIndex, setBackgroundIndex] = useState(0);
   const [dataUpdated, setDataUpdated] = useState(false);
-  
+
   const trashRef = useRef([]);
   const containerRef = useRef(null);
   const animationFrameRef = useRef(null);
   const keysRef = useRef({ left: false, right: false });
   const scoreRef = useRef(0);
 
-
   const { token } = useAuth();
-  const decodedToken = token ? jwtDecode(token) : null;
-  // console.log('Token decodificado:', decodedToken);
-
-  const userId = token ? jwtDecode(token).userId : null;
+  const userId = token ? JSON.parse(atob(token.split('.')[1])).userId : null;
+  useEffect(() => {
+    console.log('Token JWT:', token);
+    if (token) {
+      const decoded = JSON.parse(atob(token.split('.')[1]));
+      console.log('Token decodificado:', decoded);
+    }
+  }, [token]);
 
   const backgrounds = [
     '/assets/background1.jpg',
@@ -46,21 +48,25 @@ export default function Game() {
   useEffect(() => {
     scoreRef.current = score;
   }, [score]);
-  
-  // Obtener el personaje principal
+
+  // Obtener el personaje principal seleccionado por el usuario
   useEffect(() => {
     const fetchMainCharacter = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/characters/main');
+        const res = await fetch(http://localhost:5000/api/characters/selected/${userId}, {
+          headers: { Authorization: Bearer ${token} },
+        });
+
         if (!res.ok) throw new Error('No se pudo obtener el personaje principal');
         const data = await res.json();
-        setCharacter(data);
+        setCharacter(data); // Guardar los datos del personaje principal
       } catch (error) {
-        console.error(error);
+        console.error('Error al obtener el personaje principal:', error);
       }
     };
-    fetchMainCharacter();
-  }, []);
+
+    if (userId) fetchMainCharacter();
+  }, [userId, token]);
 
   // Actualización del fondo basado en el puntaje
   useEffect(() => {
@@ -69,16 +75,16 @@ export default function Game() {
     setBackgroundIndex(newIndex);
   }, [score, backgrounds]);
 
-
+  // Control del teclado
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'ArrowLeft') {
         keysRef.current.left = true;
-        setDirection('left'); // Actualizar dirección
+        setDirection('left');
       }
       if (e.key === 'ArrowRight') {
         keysRef.current.right = true;
-        setDirection('right'); // Actualizar dirección
+        setDirection('right');
       }
     };
 
@@ -95,7 +101,6 @@ export default function Game() {
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
-  
 
   // Movimiento del personaje
   useEffect(() => {
@@ -118,85 +123,69 @@ export default function Game() {
 
     return () => clearInterval(interval);
   }, [gameActive, gamePaused]);
-
-
-
+  
+  // Movimiento de la basura
   const moveTrash = () => {
     if (!gameActive || gamePaused) return;
-  
+
     trashRef.current = trashRef.current
-    .map((trash) => ({
-      ...trash,
-      y: trash.y + trash.speed, // Mueve la basura hacia abajo
-    }))
-    .filter((trash) => {
-      if (trash.processed) return false; // Ignora basuras ya procesadas
+      .map((trash) => ({
+        ...trash,
+        y: trash.y + trash.speed,
+      }))
+      .filter((trash) => {
+        if (trash.processed) return false;
 
-      const playerElement = document.querySelector(`.${styles.player}`);
-      const trashElement = document.querySelector(`[data-id="${trash.id}"]`);
+        const playerElement = document.querySelector(.${styles.player});
+        const trashElement = document.querySelector([data-id="${trash.id}"]);
 
-      if (!playerElement || !trashElement) return true;
+        if (!playerElement || !trashElement) return true;
 
-      // Detectar colisión
-      if (checkCollision(playerElement, trashElement)) {
-        console.log("Colisión detectada con basura:", trash.id);
-        trash.processed = true; // Marca la basura como procesada
-        gainPoint();
-        return false; // Elimina la basura tras recogerla
-      }
+        // Detectar colisión
+        if (checkCollision(playerElement, trashElement)) {
+          trash.processed = true;
+          gainPoint();
+          return false;
+        }
 
-      // Si la basura toca el suelo
-      if (trash.y > 550) {
-        console.log("Basura tocó el suelo:", trash.id);
-        trash.processed = true; // Marca la basura como procesada
-        loseLife();
-        return false; // Elimina la basura
-      }
+        // Si la basura toca el suelo
+        if (trash.y > 550) {
+          trash.processed = true;
+          loseLife();
+          return false;
+        }
 
-      return true;
-    });
+        return true;
+      });
 
-
-
-
-
-  
-    const trashContainer = document.querySelector(`.${styles.trashContainer}`);
+    const trashContainer = document.querySelector(.${styles.trashContainer});
     if (trashContainer) {
-      // Limpiar el contenedor de basura
       while (trashContainer.firstChild) {
         trashContainer.removeChild(trashContainer.firstChild);
       }
-  
-      // Renderizar basura actualizada
+
       trashRef.current.forEach((trash) => {
         const trashDiv = document.createElement('div');
         trashDiv.className = styles.trash;
-        trashDiv.style.left = `${trash.x}px`;
-        trashDiv.style.top = `${trash.y}px`;
-        trashDiv.style.backgroundImage = `url(${trash.img})`;
-        trashDiv.setAttribute('data-id', trash.id); // Asigna un atributo único
+        trashDiv.style.left = ${trash.x}px;
+        trashDiv.style.top = ${trash.y}px;
+        trashDiv.style.backgroundImage = url(${trash.img});
+        trashDiv.setAttribute('data-id', trash.id);
         trashContainer.appendChild(trashDiv);
       });
     }
-  
+
     animationFrameRef.current = requestAnimationFrame(moveTrash);
   };
-  
-  
-  
+
   useEffect(() => {
     if (gameActive && !gamePaused) {
       animationFrameRef.current = requestAnimationFrame(moveTrash);
     }
-  
-    return () => {
-      cancelAnimationFrame(animationFrameRef.current); // Detener la animación si cambia algo
-    };
-  }, [gameActive, gamePaused]);
-  
 
-  // Generar basura periódicamente
+    return () => cancelAnimationFrame(animationFrameRef.current);
+  }, [gameActive, gamePaused]);
+
   useEffect(() => {
     const spawnTrash = () => {
       if (!gamePaused) {
@@ -211,76 +200,50 @@ export default function Game() {
     return () => clearInterval(intervalId);
   }, [gamePaused]);
 
-  // Verificar colisión
   const checkCollision = (playerElement, trashElement) => {
     const playerRect = playerElement.getBoundingClientRect();
     const trashRect = trashElement.getBoundingClientRect();
-  
+
     return !(
-      trashRect.right < playerRect.left || // Basura está a la izquierda del jugador
-      trashRect.left > playerRect.right || // Basura está a la derecha del jugador
-      trashRect.bottom < playerRect.top || // Basura está por encima del jugador
-      trashRect.top > playerRect.bottom // Basura está por debajo del jugador
+      trashRect.right < playerRect.left ||
+      trashRect.left > playerRect.right ||
+      trashRect.bottom < playerRect.top ||
+      trashRect.top > playerRect.bottom
     );
   };
-  
-  
+
   const loseLife = () => {
-    if (dataUpdated) {
-      console.log("El juego ya se finalizó, no se llama a endGame nuevamente.");
-      return;
-    }
-  
+    if (dataUpdated) return;
+
     setLives((prev) => {
-      if (prev > 1) {
-        return prev - 1;
-      } else {
-        console.log("Fin del juego: llamando a endGame()");
-        endGame();
-        return 0;
-      }
+      if (prev > 1) return prev - 1;
+      endGame();
+      return 0;
     });
   };
-  
 
-  
+  const gainPoint = () => setScore((prev) => prev + 1);
 
-  // Aumentar puntaje
-  const gainPoint = () => {
-    setScore((prev) => prev + 1);
-  };
-
-
-
-  const endGame = () => {
-    if (!gameActive || dataUpdated) {
-      console.log("El juego ya ha terminado o los datos ya fueron actualizados.");
-      return;
-    }
+  const endGame = () => { 
+    if (!gameActive || dataUpdated) return; 
+    
+    setDataUpdated(true); 
+    setGameActive(false); 
+    setGamePaused(false); 
+    trashRef.current = []; 
   
-    setDataUpdated(true); // Bloquea futuras ejecuciones inmediatamente
   
-    const finalScore = scoreRef.current;
-    console.log("EndGame llamado. Score:", finalScore);
-  
-    setGameActive(false);
-    setGamePaused(false);
-    trashRef.current = [];
-  
-    if (finalScore > 0) {
-      console.log("Llamando a updateGameData con score:", finalScore);
-      updateGameData(finalScore);
+    if (scoreRef.current > 0) { 
+      updateGameData(scoreRef.current); 
+    } else {
+      console.log('Score no es mayor que 0, no se llama a updateGameData.');
     }
   };
   
   
   
-  
-  
-
 
   const initGame = () => {
-    console.log("Reiniciando el juego...");
     setScore(0);
     setLives(3);
     setGameActive(true);
@@ -289,56 +252,61 @@ export default function Game() {
     setDataUpdated(false);
     trashRef.current = [];
   };
-  
-  
 
-// console.log("User ID al iniciar el juego:", userId);
-// console.log("Token al iniciar el juego:", token);
-  
-const updateGameData = async (score) => {
-  // console.log("Iniciando updateGameData...");
-  // console.log("User ID:", userId);
-  // console.log("Score:", score);
-  // console.log("Token:", token);
 
-  if (!userId) {
-    console.error("No se pudo obtener el userId del token");
-    return;
-  }
+  const updateGameData = async (score) => {
+    console.log('🔵 Enviando datos al backend:', { userId, score });
 
-  try {
-    const response = await fetch('http://localhost:5000/api/game-data/update', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ userId, score }),
-    });
+    try {
+      // Actualiza los datos en PostgreSQL
+      console.log('🟢 Enviando solicitud a /update');
+      const response = await fetch('http://localhost:5000/api/game-data/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: Bearer ${token},
+        },
+        body: JSON.stringify({ userId, score }),
+      });
 
-    const data = await response.json();
-    console.log("Respuesta del backend:", data);
-  } catch (error) {
-    console.error("Error al guardar los datos del juego:", error);
-  }
+      if (!response.ok) {
+        throw new Error(❌ Error en la respuesta del backend: ${response.statusText});
+      }
+
+      const data = await response.json();
+      console.log('✅ Respuesta de /update:', data);
+
+      // 🔴 *Verifica si el puntaje es suficiente para plantar un árbol*
+      if (score >= 250) {
+        console.log('🌱 Score >= 250. Intentando incrementar árboles en MongoDB...');
+
+        const treeResponse = await fetch('http://localhost:5000/api/game-data/increment-trees-to-plant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ treesObtained: 1 }),
+        });
+
+        if (!treeResponse.ok) {
+          throw new Error(❌ Error al incrementar árboles: ${treeResponse.statusText});
+        }
+
+        const treeData = await treeResponse.json();
+        console.log('🌳 Respuesta de /increment-trees-to-plant:', treeData);
+      } else {
+        console.log('⚠️ Score menor a 250, no se incrementa el contador de árboles.');
+      }
+    } catch (error) {
+      console.error('❌ Error al guardar los datos del juego:', error);
+    }
 };
 
-
-
- 
   return (
     <div
       className={styles.background}
-      style={{
-        backgroundImage: `url(${backgrounds[backgroundIndex]})`,
-      }}
+      style={{ backgroundImage: url(${backgrounds[backgroundIndex]}) }}
     >
-      
-
       <div className={styles.gameContainer} ref={containerRef}>
-        {/* Contenedor de basura */}
         <div className={styles.trashContainer}></div>
-
         <div className={styles.scoreDisplay}>Puntos: {score}</div>
         <div className={styles.livesDisplay}>Vidas: {lives}</div>
         <button
@@ -347,21 +315,16 @@ const updateGameData = async (score) => {
         >
           {gamePaused ? 'Continuar' : 'Pausar'}
         </button>
-        {/* Contenedor del jugador */}
         <div
           className={styles.player}
           style={{
-            left: `${playerX}px`,
+            left: ${playerX}px,
             bottom: '10px',
-            backgroundImage: character ? `url(/uploads/${character.image})` : 'none',
-            transform: direction === 'left' ? 'scaleX(1)' : 'scaleX(-1)', // Voltea según la dirección
+            backgroundImage: character ? url(/uploads/${character.image}) : 'none',
+            transform: direction === 'left' ? 'scaleX(1)' : 'scaleX(-1)',
           }}
         ></div>
       </div>
-
-
-      
-
       {!gameActive && (
         <div className={styles.gameOverScreen}>
           <h1>¡Perdiste!</h1>
@@ -369,25 +332,24 @@ const updateGameData = async (score) => {
           <button className={styles.restartButton} onClick={initGame}>
             Otra Partida
           </button>
-            <Link to="/" className={styles.homeButton}>
-              Ir a inicio
-            </Link>
+          <Link to="/" className={styles.homeButton}>
+            Ir a inicio
+          </Link>
         </div>
       )}
-
       {gamePaused && (
         <div className={styles.gameOverScreen}>
-          <h1>Pausa!</h1>
+          <h1>¡Pausa!</h1>
           <p>Puntuación hasta ahora: {score}</p>
           <button
             className={styles.restartButton}
-            onClick={() => setGamePaused(false)} // Cambia el estado de pausa
+            onClick={() => setGamePaused(false)}
           >
-            Volver a Jugar
+            Volver a jugar
           </button>
-            <Link to="/" className={styles.homeButton}>
-              Ir a inicio
-            </Link>
+          <Link to="/" className={styles.homeButton}>
+            Ir a inicio
+          </Link>
         </div>
       )}
     </div>
