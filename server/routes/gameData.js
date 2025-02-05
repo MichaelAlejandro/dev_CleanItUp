@@ -1,132 +1,193 @@
-// routes/gameData.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const GameData = require('../models/GameData');
+const User = require("../models/User");
+const Plantation = require('../models/Plantation');
+const { Op } = require('sequelize'); 
 
-// Obtener los 10 mejores puntajes
-router.get('/top-scores', async (req, res) => {
+
+// Actualizar datos del juego del usuario
+router.post('/update', async (req, res) => {
+  console.log("Solicitud recibida en el backend"); // Log inicial
+
+  const { userId, score } = req.body;
+  console.log("Datos recibidos:", { userId, score });
+
+  if (!userId || !score) {
+    console.log("Datos inválidos"); // Log de datos inválidos
+    return res.status(400).json({ message: 'Faltan datos necesarios.' });
+  }
+
   try {
-    const topScores = await GameData.find()
-      .sort({ best_score: -1 }) // Orden descendente por mejor puntaje
-      .limit(10)
-      .populate('user', 'username'); // Incluye el nombre del usuario
-    res.status(200).json(topScores);
+    const user = await User.findByPk(userId);
+    console.log("Usuario encontrado:", user);
+
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+
+    // Actualiza datos del usuario
+    user.gamesPlayed += 1;
+    if (score > user.bestScore) {
+      user.bestScore = score;
+    }
+    if (score >= 250) {
+      user.treesObtained += 1;
+    }
+
+    await user.save();
+
+    console.log("Usuario actualizado:", user);
+    res.status(200).json({
+      message: 'Datos del juego actualizados correctamente.',
+      user,
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Error al obtener los mejores puntajes' });
+    console.error('Error en el backend:', error); // Log del error
+    res.status(500).json({ message: 'Error al actualizar datos del juego.' });
   }
 });
 
-// Actualizar puntaje y árboles plantados
-router.post('/update', async (req, res) => {
-    const { userId, score } = req.body;
-    console.log('Datos recibidos en el backend:', { userId, score });
-  
-    try {
-      // Busca si ya existe un registro para el usuario
-      let gameData = await GameData.findOne({ user: userId });
-  
-      if (!gameData) {
-        console.log('Verificando si ya existe un registro antes de crear uno nuevo.');
-        gameData = await GameData.findOne({ user: userId }); // Segunda verificación antes de crear
-        if (!gameData) {
-          console.log('Creando un nuevo registro para el usuario:', userId);
-          gameData = new GameData({
-            user: userId,
-            best_score: score,
-            last_score: score,
-            trees_planted: score >= 250 ? 1 : 0,
-          });
-          await gameData.save();
-          return res.status(201).json(gameData);
-        }
-      }
-  
-      // Actualizar el registro existente
-      console.log('Actualizando el registro existente para el usuario:', userId);
-      gameData.last_score = score;
-      if (score > gameData.best_score) {
-        gameData.best_score = score;
-      }
-      if (score >= 250) {
-        gameData.trees_planted += 1;
-      }
-  
-      await gameData.save();
-      return res.status(200).json(gameData);
-    } catch (error) {
-      console.error('Error en el backend:', error);
-      res.status(500).json({ error: 'Error al actualizar los datos del juego' });
-    }
-  });
 
 
-  const PlantedTrees = require('../models/PlantedTrees');
-  
-  // Obtener estadísticas de árboles plantados y por plantar
-  router.get('/trees-stats', async (req, res) => {
-    try {
-      const totalTreesToPlantData = await GameData.aggregate([
-        { $group: { _id: null, total: { $sum: "$trees_planted" } } }
-      ]);
-      const totalTreesPlantedData = await PlantedTrees.aggregate([
-        { $group: { _id: null, total: { $sum: "$trees_planted" } } }
-      ]);
-  
-      const totalTreesToPlant = totalTreesToPlantData[0]?.total || 0;
-      const totalTreesPlanted = totalTreesPlantedData[0]?.total || 0;
-  
-      const playersList = await GameData.find({ trees_planted: { $gt: 0 } })
-        .populate('user', 'username')
-        .select('user trees_planted');
-  
-      res.status(200).json({
-        totalTreesToPlant,
-        totalTreesPlanted,
-        players: playersList,
-      });
-    } catch (error) {
-      console.error('Error al obtener estadísticas de árboles:', error);
-      res.status(500).json({ error: 'Error al obtener estadísticas de árboles.' });
+// Obtener estadísticas del usuario
+router.get("/stats/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await User.findByPk(userId, {
+      attributes: ["bestScore", "gamesPlayed", "treesObtained"],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
     }
-  });
-  
-  // Actualizar el número de árboles plantados manualmente
-  router.post('/update-trees-planted', async (req, res) => {
-    const { treesPlanted } = req.body;
-  
-    if (treesPlanted == null || treesPlanted <= 0) {
-      return res.status(400).json({ error: "Cantidad inválida de árboles plantados." });
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error al obtener estadísticas del usuario:", error);
+    res.status(500).json({ error: "Error al obtener estadísticas del usuario" });
+  }
+});
+
+// Obtener el ranking del usuario
+router.get("/top-scores", async (req, res) => {
+  try {
+    const topScores = await User.findAll({
+      order: [["bestScore", "DESC"]], // Ordenar por el puntaje más alto
+      limit: 10, // Limitar a los 10 mejores
+      attributes: ["id", "username", "bestScore"], // Seleccionar solo las columnas necesarias
+    });
+
+    res.status(200).json(topScores);
+  } catch (error) {
+    console.error("Error al obtener el ranking:", error);
+    res.status(500).json({ error: "Error al obtener el ranking" });
+  }
+});
+
+
+
+
+
+
+// Obtener estadísticas de los árboles
+router.get('/trees-stats', async (req, res) => {
+  try {
+    const plantation = await Plantation.findOne(); // Obtiene el único registro
+    const totalTreesToPlant = plantation ? plantation.treesToPlant : 0; 
+    const totalTreesPlanted = plantation ? plantation.treesPlanted : 0; 
+
+    // Obtener lista de jugadores y sus árboles obtenidos desde PostgreSQL
+    const players = await User.findAll({
+      attributes: ['username', 'treesObtained'],
+      where: { treesObtained: { [Op.gt]: 0 } }, // Condición: árboles obtenidos > 0
+    });
+
+    res.status(200).json({
+      totalTreesToPlant,
+      totalTreesPlanted,
+      players: players.map((player) => ({
+        username: player.username,
+        treesObtained: player.treesObtained,
+      })),
+    });
+  } catch (error) {
+    console.error('Error al obtener estadísticas de árboles:', error);
+    res.status(500).json({ error: 'Error al obtener estadísticas de árboles' });
+  }
+});
+
+
+// Actualizar el número de árboles plantados manualmente
+router.post('/update-trees-planted', async (req, res) => {
+  const { treesPlanted } = req.body;
+
+  if (!treesPlanted || treesPlanted <= 0) {
+    return res.status(400).json({ error: 'Cantidad inválida de árboles plantados.' });
+  }
+
+  try {
+    // 🔥 Buscar o crear el registro único en la colección Plantation
+    let plantation = await Plantation.findOne();
+    if (!plantation) {
+      plantation = await Plantation.create({ treesToPlant: 0, treesPlanted: 0 });
     }
-  
-    try {
-      // Obtener los datos actuales
-      const totalTreesToPlantData = await GameData.aggregate([
-        { $group: { _id: null, total: { $sum: "$trees_planted" } } }
-      ]);
-      const totalTreesPlantedData = await PlantedTrees.aggregate([
-        { $group: { _id: null, total: { $sum: "$trees_planted" } } }
-      ]);
-  
-      const totalTreesToPlant = totalTreesToPlantData[0]?.total || 0;
-      const totalTreesPlanted = totalTreesPlantedData[0]?.total || 0;
-  
-      const remainingTreesToPlant = totalTreesToPlant - totalTreesPlanted;
-  
-      // Validar si hay suficientes árboles por plantar
-      if (treesPlanted > remainingTreesToPlant) {
-        return res.status(400).json({ error: "La cantidad de árboles plantados excede los árboles por plantar disponibles." });
-      }
-  
-      // Registrar la cantidad de árboles plantados en la tabla `PlantedTrees`
-      const plantedEntry = new PlantedTrees({ trees_planted: treesPlanted });
-      await plantedEntry.save();
-  
-      res.status(200).json({ message: "Árboles plantados actualizados correctamente." });
-    } catch (error) {
-      console.error('Error al actualizar árboles plantados:', error);
-      res.status(500).json({ error: 'Error al actualizar árboles plantados.' });
+
+    // 🔹 Validar si hay suficientes árboles por plantar
+    const remainingTreesToPlant = plantation.treesToPlant - plantation.treesPlanted;
+    if (treesPlanted > remainingTreesToPlant) {
+      return res.status(400).json({ error: 'No hay suficientes árboles por plantar disponibles.' });
     }
-  });
-  
-  module.exports = router;
-  
+
+    // 🔥 *Restar de treesToPlant y sumar en treesPlanted*
+    plantation.treesToPlant -= treesPlanted;
+    plantation.treesPlanted += treesPlanted;
+
+    // Guardar cambios en MongoDB
+    await plantation.save();
+
+    res.status(200).json({
+      message: 'Árboles plantados actualizados correctamente.',
+      plantation,
+    });
+  } catch (error) {
+    console.error('❌ Error al actualizar árboles plantados:', error);
+    res.status(500).json({ error: 'Error al actualizar árboles plantados.' });
+  }
+});
+
+
+// Incrementar árboles por plantar (cuando un usuario alcanza 250 puntos)
+router.post('/increment-trees-to-plant', async (req, res) => {
+  const { treesObtained } = req.body;
+  console.log('📩 Datos recibidos en la API:', { treesObtained });
+
+  if (!treesObtained || treesObtained <= 0) {
+    console.log('⚠️ Datos inválidos. No se procesa la solicitud.');
+    return res.status(400).json({ error: 'Cantidad inválida de árboles por plantar.' });
+  }
+
+  try {
+    let plantation = await Plantation.findOne();
+    console.log('🔎 Resultado de Plantation.findOne():', plantation);
+
+    if (!plantation) {
+      console.log('⚠️ No existe un registro en Plantation. Creando uno nuevo...');
+      plantation = new Plantation({ treesToPlant: 0, treesPlanted: 0 });
+      await plantation.save();
+      console.log('✅ Registro de Plantation creado correctamente:', plantation);
+    } else {
+      console.log('✅ Registro de Plantation encontrado:', plantation);
+    }
+
+    plantation.treesToPlant += treesObtained;
+    await plantation.save();
+
+    res.status(200).json({ message: 'Árboles por plantar incrementados correctamente.' });
+  } catch (error) {
+    console.error('❌ Error al incrementar árboles por plantar:', error);
+    res.status(500).json({ error: 'Error al incrementar árboles por plantar.' });
+  }
+});
+
+module.exports = router;
