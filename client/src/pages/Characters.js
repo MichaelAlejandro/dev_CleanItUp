@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef,useCallback } from "react";
 import Navbar from "../components/Navbar";
 import "../styles/Characters.css";
 
@@ -21,20 +21,14 @@ const Characters = () => {
 
 
   const editImageInputRef = useRef(null);
-
-  useEffect(() => {
-    fetchCharacters();
-    fetchSelectedCharacter();
-  }, []);
-
   // ========================
   //        READ
   // ========================
-  const fetchCharacters = async () => {
+  const fetchCharacters = useCallback(async () => {
     try {
       const response = await fetch("http://localhost:5000/api/characters", {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: Bearer ${token},
         },
       });
 
@@ -45,24 +39,31 @@ const Characters = () => {
     } catch (err) {
       setError(err.message);
     }
-  };
+  }, [token]); // Dependencias: Solo cambiará si token cambia
 
-  const fetchSelectedCharacter = async () => {
+  const fetchSelectedCharacter = useCallback(async () => {
     try {
-      if (!userId) return; 
+      if (!userId) return;
 
-      const response = await fetch(`http://localhost:5000/api/characters/selected/${userId}`, {
+      const response = await fetch(http://localhost:5000/api/characters/selected/${userId}, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: Bearer ${token},
         },
       });
+
+      if (!response.ok) throw new Error("Error al obtener el personaje seleccionado");
 
       const data = await response.json();
       setSelectedCharacter(data);
     } catch (err) {
       setError(err.message);
     }
-  };
+  }, [token, userId]); // Dependencias: Solo cambiará si token o userId cambian
+
+  useEffect(() => {
+    fetchCharacters();
+    fetchSelectedCharacter();
+  }, [fetchCharacters, fetchSelectedCharacter]); // Ahora son funciones estables
 
   // ========================
   //       CREATE
@@ -82,7 +83,7 @@ const Characters = () => {
       const response = await fetch("http://localhost:5000/api/characters", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: Bearer ${token},
         },
         body: formData,
       });
@@ -127,10 +128,10 @@ const Characters = () => {
         formData.append("image", editImageFile);
       }
 
-      const response = await fetch(`http://localhost:5000/api/characters/${editCharacterId}`, {
+      const response = await fetch(http://localhost:5000/api/characters/${editCharacterId}, {
         method: "PUT",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: Bearer ${token},
         },
         body: formData,
       });
@@ -161,10 +162,10 @@ const Characters = () => {
   // ========================
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/characters/${id}`, {
+      const response = await fetch(http://localhost:5000/api/characters/${id}, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: Bearer ${token},
         },
       });
 
@@ -181,11 +182,11 @@ const Characters = () => {
   // ========================
   const handleSelectCharacter = async (id) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/characters/${id}/select`, {
+      const response = await fetch(http://localhost:5000/api/characters/${id}/select, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: Bearer ${token},
         },
         body: JSON.stringify({ userId }),
       });
@@ -251,7 +252,7 @@ const Characters = () => {
           <h2>Lista de Personajes</h2>
           {characters.map((char) => (
             <div key={char.id} className="character-card">
-              <img src={`/uploads/${char.image}`} alt={char.name} style={{ width: "100px", height: "100px", objectFit: "cover" }} />
+              <img src={/uploads/${char.image}} alt={char.name} style={{ width: "100px", height: "100px", objectFit: "cover" }} />
               <h3>{char.name}</h3>
               <p>{char.description}</p>
               {editCharacterId === char.id ? (
@@ -286,7 +287,7 @@ const Characters = () => {
         {selectedCharacter && (
           <div className="main-character">
             <h2>Personaje Seleccionado</h2>
-            <img src={`/uploads/${selectedCharacter.image}`} alt={selectedCharacter.name} style={{ width: "100px", height: "100px", objectFit: "cover" }} />
+            <img src={/uploads/${selectedCharacter.image}} alt={selectedCharacter.name} style={{ width: "100px", height: "100px", objectFit: "cover" }} />
             <h3>{selectedCharacter.name}</h3>
             <p>{selectedCharacter.description}</p>
           </div>
