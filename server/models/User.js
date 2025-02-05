@@ -18,11 +18,29 @@ const User = sequelize.define("User", {
     unique: { msg: "El correo ya está registrado" } 
   },
 
-  password: { type: DataTypes.STRING, allowNull: true }, // ✅ Permitimos null para usuarios de Google
+  password: { type: DataTypes.STRING, allowNull: true }, // Permitimos null para usuarios de Google
 
   selectedCharacterId: { 
     type: DataTypes.INTEGER, 
     references: { model: "Characters", key: "id" }
+  },
+
+  bestScore: { 
+    type: DataTypes.INTEGER, 
+    allowNull: false, 
+    defaultValue: 0 
+  },
+
+  gamesPlayed: { 
+    type: DataTypes.INTEGER, 
+    allowNull: false, 
+    defaultValue: 0 
+  },
+
+  treesObtained: { 
+    type: DataTypes.INTEGER, 
+    allowNull: false, 
+    defaultValue: 0 
   }
 }, 
 {
@@ -42,7 +60,7 @@ const User = sequelize.define("User", {
   }
 });
 
-// 🔹 Método de instancia para comparar contraseñas en el login
+// Método de instancia para comparar contraseñas en el login
 User.prototype.comparePassword = async function (candidatePassword) {
   if (!this.password) return false; // Evita comparar null en usuarios de Google
   return await bcrypt.compare(candidatePassword, this.password);
