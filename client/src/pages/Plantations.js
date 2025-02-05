@@ -6,8 +6,8 @@ const Plantations = () => {
   const [treesToPlant, setTreesToPlant] = useState(0);
   const [treesPlanted, setTreesPlanted] = useState(0);
   const [players, setPlayers] = useState([]);
-  const [newTreesPlanted, setNewTreesPlanted] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [newTreesPlanted, setNewTreesPlanted] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     fetchStats();
@@ -26,15 +26,15 @@ const Plantations = () => {
   };
 
   const handleUpdateTrees = async () => {
-    setErrorMessage("");
+    setErrorMessage('');
 
     if (!newTreesPlanted || newTreesPlanted <= 0) {
-      setErrorMessage("Por favor, ingresa una cantidad válida.");
+      setErrorMessage('Por favor, ingresa una cantidad válida.');
       return;
     }
 
     if (newTreesPlanted > treesToPlant - treesPlanted) {
-      setErrorMessage("La cantidad de árboles plantados no puede exceder los árboles por plantar.");
+      setErrorMessage('La cantidad de árboles plantados no puede exceder los árboles por plantar.');
       return;
     }
 
@@ -44,19 +44,19 @@ const Plantations = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ treesPlanted: parseInt(newTreesPlanted) }),
+        body: JSON.stringify({ treesPlanted: parseInt(newTreesPlanted, 10) }),
       });
 
       const data = await response.json();
       if (data.message) {
-        setNewTreesPlanted("");
-        fetchStats(); 
+        setNewTreesPlanted('');
+        fetchStats(); // Actualiza estadísticas
       } else if (data.error) {
         setErrorMessage(data.error);
       }
     } catch (error) {
       console.error('Error al actualizar árboles:', error);
-      setErrorMessage("Ocurrió un error al actualizar los árboles.");
+      setErrorMessage('Ocurrió un error al actualizar los árboles.');
     }
   };
 
@@ -67,12 +67,11 @@ const Plantations = () => {
         <div className={styles.plantacionContainer}>
           <h1 className={styles.title}>🌱 Plantación 🌱</h1>
           <p className={styles.description}>
-            Cada vez que un jugador alcance <strong>250 puntos</strong>, 
-            se plantará un árbol en su nombre, contribuyendo a un mundo más verde.
+            Cada vez que un jugador alcance <strong>250 puntos</strong>, se plantará un árbol en su nombre.
           </p>
           <div className={styles.stats}>
             <div className={styles.stat}>
-              <h2 className={styles.statNumber}>{treesToPlant - treesPlanted}</h2>
+              <h2 className={styles.statNumber}>{treesToPlant}</h2>
               <p className={styles.statLabel}>Árboles por plantar</p>
             </div>
             <div className={styles.stat}>
@@ -94,11 +93,11 @@ const Plantations = () => {
         </div>
 
         <div className={styles.plantacionList}>
-          <h2 className={styles.listTitle}>🌱 Árboles plantados en nombre de nuestros jugadores 🌱</h2>
+          <h2 className={styles.listTitle}>🌱 Árboles plantados por nuestros jugadores 🌱</h2>
           <ul className={styles.userList}>
-            {players.map((player) => (
-              <li key={player.user._id} className={styles.userItem}>
-                {player.trees_planted} árbol(es) plantado(s) en nombre de <strong>{player.user.username}</strong>
+            {players.map((player, index) => (
+              <li key={index} className={styles.userItem}>
+                {player.treesObtained} árbol(es) plantado(s) por <strong>{player.username}</strong>
               </li>
             ))}
           </ul>
