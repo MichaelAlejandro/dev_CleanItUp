@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import Navbar from '../components/Navbar';
-import '../styles/Ranking.module.css';
+import React, { useEffect, useState } from "react";
+import Navbar from "../components/Navbar";
+import "../styles/Ranking.module.css";
 
 const Ranking = () => {
   const [rankingData, setRankingData] = useState([]);
@@ -9,11 +9,14 @@ const Ranking = () => {
   useEffect(() => {
     const fetchRanking = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/game-data/top-scores');
+        const response = await fetch("http://localhost:5000/api/game-data/top-scores");
+        if (!response.ok) {
+          throw new Error("Error al obtener el ranking");
+        }
         const data = await response.json();
         setRankingData(data);
       } catch (error) {
-        console.error('Error al obtener el ranking:', error);
+        console.error("Error al obtener el ranking:", error);
       }
     };
 
@@ -36,10 +39,10 @@ const Ranking = () => {
             </thead>
             <tbody>
               {rankingData.map((player, index) => (
-                <tr key={player.user._id || index}>
+                <tr key={player.id}>
                   <td>{index + 1}</td>
-                  <td>{player.user.username}</td>
-                  <td>{player.best_score}</td>
+                  <td>{player.username}</td>
+                  <td>{player.bestScore}</td>
                 </tr>
               ))}
             </tbody>
